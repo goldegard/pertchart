@@ -32,10 +32,15 @@ class Node:
             responsible=obj.get("responsible", ""),
         )
 
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: str) -> Any:
         if key == "Tid":
             key = "id"
         return getattr(self, key)
+    
+    def __setitem__(self, key: str, value: Any) -> None:
+        if key == "Tid":
+            key = "id"
+        setattr(self, key, value)
 
     def __str__(self):
         pred_str = [p.id for p in self.pred]
@@ -83,3 +88,12 @@ class Graph:
 
     def __getitem__(self, key: str) -> Node:
         return self._node_dict[key]
+
+    def __iter__(self):
+        return self._node_dict.__iter__()
+
+    def items(self):
+        return self._node_dict.items()
+    
+    def keys(self):
+        return self._node_dict.keys()

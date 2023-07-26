@@ -1,122 +1,62 @@
-#!/usr/bin/python;
-
-# Author: Dr. Sisay Chala
-# Requirements
-# graphviz
-# json
-
-# In case it raised errors, uninstall graphvis and reinstall it
-#! pip uninstall graphviz
-#! conda install python-graphviz
+from __future__ import annotations
 
 from graphviz import Digraph, nohtml
-import ast
-import sys
 import json
-
-# Data
-# For the first tasks, predecessor will be "START",
-# The final tasks preced a dummy task called "END",
+from .graph import Graph
 
 
 class PertChart:
-    def getInput(self, filename):
-        task_list = []
-        try:
-            """# this works for input file having one tuple of task per line (cf. v0.3)
-            with open(filename) as f:
-                for line in f:
-                    values = ast.literal_eval(line)
-                    task_list.append(values)
-            """
-            with open(filename) as f:
-                task_list = json.load(f)
-        except:
-            print(
-                "Cannot generate PERT chart. File content of <"
-                + filename
-                + "> cannot be loaded."
-            )
-            sys.exit(1)
+    def __init__(self, graph: Graph):
+        self._graph: Graph = graph
 
-        return task_list
+    @property
+    def graph(self):
+        return self._graph
 
-    """ # This is for ES, EF, LS, LF, SL
-    def calculateValues(self, p):
-        p1 = p
-        for k, v in p1.items():
-            print(k, v)
-            pred = p1[k]["pred"].split(',')
-            
-            if p1[k]['pred'] == "": #no predecessor
-                p1[k]['EF'] = p1[k]['ES'] + p1[k]['D']
-                
-            elif len(pred) == 1: # 1 predecessor
-                key = p1[k]["pred"]
+    @staticmethod
+    def from_json(filename: str) -> PertChart:
+        with open(filename, "r") as f:
+            json_obj = json.load(f)
+        return PertChart(graph=Graph.from_json(json_obj))
 
-                p1[k]['ES'] = p1[key]['EF'] #EF of predecessor
-                p1[k]['EF'] = p1[k]['ES'] + p1[k]['D']
-            
-            elif len(pred) >1: # 1 predecessor
-                print(pred)
-                key = pred[1].strip()
-                print(key)
-                print(p1[key]['EF'])
-                p1[k]['ES'] = max(p1[pred[1].strip()]['EF'], p1[pred[1].strip()]['EF']) # list compression
-                p1[k]['EF'] = p1[k]['ES'] + p1[k]['D']
-                #l = p1[pred[1]]['EF'] # for j in range(len(pred))
-                #p1[k]['ES'] = max([p1[pred[j]['EF'] for j in range(len(pred)
-        return p1
-        """
+    def calculate_values(self) -> PertChart:
+        for k in self._graph:
+            if self._graph[k].id == "START":
+                continue
+            pred = self._graph[k]["pred"]
 
-    def calculate_values(self, p):
-        p1 = p
-        for k, v in p1.items():
-            pred = p1[k]["pred"]
-
-            if p1[k]["pred"][0] == "START":  # no predecessor
-                p1[k]["end"] = p1[k]["start"] + p1[k]["duration"]
+            if self._graph[k]["pred"][0].id == "START":  # no predecessor
+                self._graph[k]["end"] = (
+                    self._graph[k]["start"] + self._graph[k]["duration"]
+                )
 
             elif len(pred) == 1:  # 1 predecessor
-                key = p1[k]["pred"][0]
+                key = self._graph[k]["pred"][0].id
 
-                p1[k]["start"] = p1[key]["end"]  # EF of predecessor
-                p1[k]["end"] = p1[k]["start"] + p1[k]["duration"]
+                self._graph[k]["start"] = self._graph[key]["end"]  # EF of predecessor
+                self._graph[k]["end"] = (
+                    self._graph[k]["start"] + self._graph[k]["duration"]
+                )
 
             elif len(pred) > 1:  # more than 1 predecessor
-                key = pred[1].strip()
-                ends = [p1[p.strip()]["end"] for p in pred]  # list comprehenssion
-                p1[k]["start"] = max(ends)
-                p1[k]["end"] = p1[k]["start"] + p1[k]["duration"]
+                key = pred[1].id.strip()
+                ends = [
+                    self._graph[p.id.strip()]["end"] for p in pred
+                ]  # list comprehenssion
+                self._graph[k]["start"] = max(ends)
+                self._graph[k]["end"] = (
+                    self._graph[k]["start"] + self._graph[k]["duration"]
+                )
                 # l = p1[pred[1]]['EF'] # for j in range(len(pred))
                 # p1[k]['ES'] = max([p1[pred[j]['EF'] for j in range(len(pred)
-        return p1
+        return self
 
-    def create_pert_chart(self, task_list, fill_color="grey93", line_color="blue"):
-        """Gets task list, optional fill_color and line_color and generates PERT chart
+    def calculate_critical_task(self) -> PertChart:
+        ...
 
-        Parameters
-        ----------
-        filename : str
-            The file containing task list
-
-        Returns
-        -------
-        PERT chart diagram
-        """
-        """
-        task_list = []
-        try:
-            with open(filename) as f:
-                for line in f:
-                    values = ast.literal_eval(line)
-                    task_list.append(values)
-        except:
-            print("Cannot generate PERT chart. File does not exist -> " + filename)
-            sys.exit(1)
-                
-        a = task_list
-        """
+    def create_pert_chart(
+        self, task_list, fill_color="grey93", line_color="blue"
+    ) -> None:
         a = task_list
         # Graph Instance
         g = Digraph(
@@ -147,7 +87,7 @@ class PertChart:
                   )
         """
 
-        for k, v in a.items():
+        for k in a:
             if a[k]["Tid"] == "END":
                 continue
             g.node(
@@ -175,55 +115,29 @@ class PertChart:
         g.edge('node0', 'node1')
         """
 
-        try:
-            """# this works for input file having one tuple of task per line (cf. v0.3)
-            for i in a: # for rows in a
-                #g.edge(i[3] + ':f2', i[0] + ':f0')
-                if i[0] == "END":
-                    g.edge(i[5], "FINISH")
+        """# this works for input file having one tuple of task per line (cf. v0.3)
+        for i in a: # for rows in a
+            #g.edge(i[3] + ':f2', i[0] + ':f0')
+            if i[0] == "END":
+                g.edge(i[5], "FINISH")
+            else:
+                g.edge(i[5], i[0])
+        """
+        for k in a:  # for task in json task list
+            # g.edge(i[3] + ':f2', i[0] + ':f0')
+            if a[k]["Tid"] == "END":
+                predecessors = a[k]["pred"]
+                if len(predecessors) > 1:
+                    for task in predecessors:
+                        g.edge(task.id, a[k]["Tid"])
                 else:
-                    g.edge(i[5], i[0])
-            """
-            for k, v in a.items():  # for task in json task list
-                # g.edge(i[3] + ':f2', i[0] + ':f0')
-                if a[k]["Tid"] == "END":
-                    predecessors = a[k]["pred"]
-                    if len(predecessors) > 1:
-                        for task in predecessors:
-                            g.edge(task, a[k]["Tid"])
-                    else:
-                        g.edge(a[k]["pred"][0], "FINISH")
+                    g.edge(a[k]["pred"][0].id, "FINISH")
+            elif a[k]["Tid"] != "START":
+                predecessors = a[k]["pred"]
+                if len(predecessors) > 1:
+                    for task in predecessors:
+                        g.edge(task.id, a[k]["Tid"])
                 else:
-                    predecessors = a[k]["pred"]
-                    if len(predecessors) > 1:
-                        for task in predecessors:
-                            g.edge(task, a[k]["Tid"])
-                    else:
-                        g.edge(a[k]["pred"][0], a[k]["Tid"])
-        except Exception as e:
-            print("Unexpected error. Check your inputs")
-            print(e)
-        """finally:
-            print("PERT chart generation completed")"""
+                    g.edge(a[k]["pred"][0].id, a[k]["Tid"])
         print(g)
         g.view()
-
-
-if __name__ == "__main__":
-    """PERT chart generator
-    Usage:
-        python pertchart.py <filename>
-    """
-    pc = PertChart()
-
-    if len(sys.argv) >= 2:
-        # print(sys.argv[1])
-        filename = sys.argv[1]  # "datafile.txt"
-        # get data from file
-        task_list = pc.getInput(filename)
-        # caluculate values
-        task_list = pc.calculate_values(task_list)
-        # create pert chart
-        pc.create_pert_chart(task_list)
-    else:
-        print("Usage: pertchart <filename>")
