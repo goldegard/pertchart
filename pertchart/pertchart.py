@@ -52,7 +52,29 @@ class PertChart:
         return self
 
     def calculate_critical_task(self) -> PertChart:
-        ...
+        def explore_keys(keys_to_explore):
+            max_keys = []
+            for k in keys_to_explore:
+                max_keys_dict = {}
+                node = self._graph[k]
+                if node.pred:
+                    for p in node.pred:
+                        if p.end in max_keys_dict:
+                            max_keys_dict[p.end].append(p.id)
+                        else:
+                            max_keys_dict[p.end] = [p.id]
+                    max_value = max(list(max_keys_dict.keys()))
+                    max_keys.extend(max_keys_dict[max_value])
+
+            # update node property
+            for m in max_keys:
+                self._graph[m].critical = True
+            # serch on max_keys
+            if max_keys:
+                explore_keys(keys_to_explore=max_keys)
+
+        explore_keys(keys_to_explore=["END"])
+        return self
 
     def create_pert_chart(
         self, task_list, fill_color="grey93", line_color="blue"
@@ -64,6 +86,7 @@ class PertChart:
         )
 
         # configurations
+        critical_color = "red"
         fl_color = fill_color
         ln_color = line_color
 
@@ -90,6 +113,10 @@ class PertChart:
         for k in a:
             if a[k]["Tid"] == "END":
                 continue
+            if a[k].critical:
+                color = critical_color
+            else:
+                color = ln_color
             g.node(
                 a[k]["Tid"],
                 nohtml(
@@ -106,7 +133,7 @@ class PertChart:
                 ),
                 fillcolor=fl_color,
                 style="filled",
-                color=ln_color,
+                color=color,
             )
 
         # Edges

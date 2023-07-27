@@ -10,6 +10,7 @@ class Node:
         duration: int = 0,
         end: int = 0,
         responsible: str = "",
+        critical: bool = False,
     ) -> None:
         self.id = id
         self.start = start
@@ -17,6 +18,7 @@ class Node:
         self.end = end
         self.responsible = responsible
         self.pred = []
+        self.critical = critical
 
     @staticmethod
     def from_dict(obj: Dict[str, Any]) -> Node:
